@@ -16,3 +16,5 @@ gdown
 seaborn
 matplotlib
 pandas
+datasets
+rouge_score
