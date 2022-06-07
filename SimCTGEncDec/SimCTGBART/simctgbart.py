@@ -27,6 +27,48 @@ class SimCTGBART(nn.Module):
         self.vocab_size = len(self.tokenizer)
         self.embed_dim = self.model.config.hidden_size
         self.pad_token_id = self.tokenizer.pad_token_id
+
+    def compute_logits_and_hidden_states(self, input_ids):
+        # used for advanced decoding
+        # input_ids: 1 x seqlen
+        outputs = self.model(input_ids=input_ids, output_hidden_states=True)
+        last_hidden_states = outputs.hidden_states[-1]
+        logits = outputs.logits
+        return last_hidden_states, logits
+
+    def forward(self, input_ids, labels):
+        bsz, seqlen = input_ids.size()
+        outputs = self.model(input_ids=input_ids, output_hidden_states=True, labels=labels)
+        logits = outputs.logits
+        assert logits.size() == torch.Size([bsz, seqlen, self.vocab_size])
+        last_hidden_states = outputs.hidden_states[-1]
+        assert last_hidden_states.size() == torch.Size([bsz, seqlen, self.embed_dim])
+        return last_hidden_states, logits
+
+    def eval_loss(self, input_ids, labels):
+        bsz, seqlen = input_ids.size()
+        outputs = self.model(input_ids=input_ids, output_hidden_states=True, labels=labels)
+        logits = outputs.logits
+        assert logits.size() == torch.Size([bsz, seqlen, self.vocab_size])
+        mle_loss = val_fct(logits.view(-1, self.vocab_size), labels.view(-1))
+        assert mle_loss.size() == torch.Size([bsz * seqlen])
+        mask_tmp = labels.masked_fill(~labels.eq(-100), 1.0)
+        mask = mask_tmp.masked_fill(mask_tmp.eq(-100), 0.0)
+        # sum 
+        mle_loss_sum = torch.sum(mle_loss)
+        token_num_sum = torch.sum(mask)
+        return mle_loss_sum, token_num_sum
+
+    def save_model(self, ckpt_save_path):
+        import os
+        if os.path.exists(ckpt_save_path):
+            pass
+        else: # recursively construct directory
+            os.makedirs(ckpt_save_path, exist_ok=True)
+        # save model
+        self.model.save_pretrained(ckpt_save_path)
+        # save tokenizer
+        self.tokenizer.save_pretrained(ckpt_save_path)
         
     @torch.no_grad()
     # decoding functions
