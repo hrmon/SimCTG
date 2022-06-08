@@ -36,14 +36,15 @@ class SimCTGBART(nn.Module):
         logits = outputs.logits
         return last_hidden_states, logits
 
-    def forward(self, input_ids, labels):
+    def forward(self, input_ids, labels, **kwargs):
         bsz, seqlen = labels.size()
         outputs = self.model(input_ids=input_ids, output_hidden_states=True, labels=labels)
-        logits = outputs.logits
-        assert logits.size() == torch.Size([bsz, seqlen, self.vocab_size])
-        last_hidden_states = outputs.decoder_hidden_states[-1]
-        assert last_hidden_states.size() == torch.Size([bsz, seqlen, self.embed_dim])
-        return last_hidden_states, logits
+        return outputs
+        # logits = outputs.logits
+        # assert logits.size() == torch.Size([bsz, seqlen, self.vocab_size])
+        # last_hidden_states = outputs.decoder_hidden_states[-1]
+        # assert last_hidden_states.size() == torch.Size([bsz, seqlen, self.embed_dim])
+        # return last_hidden_states, logits
 
     def eval_loss(self, input_ids, labels):
         bsz, seqlen = labels.size()
