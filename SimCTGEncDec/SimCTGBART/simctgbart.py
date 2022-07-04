@@ -74,7 +74,7 @@ class SimCTGBART(nn.Module):
     @torch.no_grad()
     # decoding functions
     # ------------------------------------------------------- #
-    def fast_contrastive_search(self, input_ids, decoder_ids, beam_width, alpha, decoding_len):
+    def fast_contrastive_search(self, input_ids, decoder_ids, beam_width, alpha, decoding_len, output_hidden_states=False):
         '''
            input_ids: prefix input; 1 x prefix_len
            decoding_len: how many tokens to generate
@@ -108,7 +108,7 @@ class SimCTGBART(nn.Module):
             )
             token = decoder_ids.squeeze(dim=-1).item()
             generated.append(token)
-        return generated
+        return (generated, last_hidden_states) if output_hidden_states else generated
 
     def greedy_search(self, input_ids, decoding_len):
         output = self.model.generate(
