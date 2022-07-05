@@ -28,11 +28,15 @@ class SimCTGBART(nn.Module):
         self.embed_dim = self.model.config.hidden_size
         self.pad_token_id = self.tokenizer.pad_token_id
 
-    def compute_logits_and_hidden_states(self, input_ids):
+    def compute_logits_and_hidden_states(self, input_ids, decoder_ids):
         # used for advanced decoding
         # input_ids: 1 x seqlen
-        outputs = self.model(input_ids=input_ids, output_hidden_states=True)
-        last_hidden_states = outputs.hidden_states[-1]
+        outputs = self.model(
+          input_ids=input_ids,
+          decoder_input_ids=decoder_ids,
+          output_hidden_states=True
+        )
+        last_hidden_states = outputs.decoder_hidden_states[-1]
         logits = outputs.logits
         return last_hidden_states, logits
 
@@ -133,7 +137,7 @@ class SimCTGBART(nn.Module):
 
         return output[0]
 
-    def slow_sampling_contrastive_search(self, input_ids, p, alpha, decoding_len):
+    def slow_sampling_contrastive_search(self, input_ids, decoder_input_ids, p, alpha, decoding_len):
         '''
            input_ids: prefix input; 1 x prefix_len
            decoding_len: how many tokens to generate
@@ -141,7 +145,7 @@ class SimCTGBART(nn.Module):
            alpha: regulates importance of model confidence and degeneration penalty
         '''
 
-        from utils_prob import ContrastiveDecodingOneStep
+        from utils_prob import EncDecContrastiveDecodingOneStep
         for step in range(decoding_len):
-            input_ids = ContrastiveDecodingOneStep(self, input_ids, p, alpha)
-        return input_ids[0]
+            decoder_input_ids = EncDecContrastiveDecodingOneStep(self, input_ids, decoder_input_ids, p, alpha)
+        return decoder_input_ids[0]

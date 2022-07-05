@@ -2,6 +2,8 @@
 import torch
 import torch.nn.functional as F
 
+MAX_SAMPLE_SIZE = 30
+
 def ranking(context_hidden, next_hidden, next_top_k_ids, next_top_k_probs, alpha):
     '''
         context_hidden: beam_width x context_len x embed_dim
@@ -34,11 +36,12 @@ def EncDecContrastiveDecodingOneStep(model, input_ids, decoder_input_ids, p, alp
 
     sorted_probs, sorted_indices = torch.sort(next_probs, descending=True)
     cumulative_probs = torch.cumsum(sorted_probs, dim=-1)
-    sorted_indices_to_remove = cumulative_probs > p
-    top_p_count = (1 - sorted_indices_to_remove).sum()
+    sorted_indices_to_remove = cumulative_probs <= p
+    sorted_indices_to_remove[:, 0] = 1
+    top_p_count = min(MAX_SAMPLE_SIZE, sorted_indices_to_remove.sum())
 
-    top_p_ids = sorted_indices[:top_p_count]
-    top_p_probs = sorted_probs[:top_p_count]
+    top_p_ids = sorted_indices[:, :top_p_count]
+    top_p_probs = sorted_probs[:, :top_p_count]
 
         
     top_p_probs = torch.gather(next_probs, dim = 1, index=top_p_ids)
