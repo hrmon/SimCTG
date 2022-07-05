@@ -122,4 +122,26 @@ class SimCTGBART(nn.Module):
                             max_length=decoding_len, 
                             num_beams=beam_width)
         return output[0]
+    
+    def nucleus_sampling(self, input_ids, nucleus_p, decoding_len):
+        output = self.model.generate(
+                            input_ids, 
+                            do_sample=True, 
+                            max_length=decoding_len, 
+                            top_p=nucleus_p,
+                            top_k=0)
 
+        return output[0]
+
+    def slow_sampling_contrastive_search(self, input_ids, p, alpha, decoding_len):
+        '''
+           input_ids: prefix input; 1 x prefix_len
+           decoding_len: how many tokens to generate
+           p: probability filtering
+           alpha: regulates importance of model confidence and degeneration penalty
+        '''
+
+        from utils_prob import ContrastiveDecodingOneStep
+        for step in range(decoding_len):
+            input_ids = ContrastiveDecodingOneStep(self, input_ids, p, alpha)
+        return input_ids[0]
