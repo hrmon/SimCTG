@@ -18,3 +18,4 @@ matplotlib
 pandas
 datasets
 rouge_score
+simcse
